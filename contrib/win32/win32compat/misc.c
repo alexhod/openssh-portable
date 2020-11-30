@@ -1198,6 +1198,39 @@ w32_strerror(int errnum)
 	return errorBuf;
 }
 
+#ifdef WIN32
+static int get_clip_data(char* buf, int len) {
+	int l = 0;
+
+	if (IsClipboardFormatAvailable(CF_TEXT)) {
+		if (OpenClipboard(NULL)) {
+			HGLOBAL hglb = GetClipboardData(CF_TEXT);
+			if (NULL != hglb)
+			{
+				char* str = GlobalLock(hglb);
+				if (NULL != str) {
+                    int l2 = (int)strlen(str);
+					if (l2 < len) {
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+						strcpy(buf, str);
+#pragma warning(pop)
+#endif
+						l = l2;
+					}
+					// release the lock
+					GlobalUnlock(hglb);
+				}
+			}
+			CloseClipboard();
+		}
+	}
+
+	return l;
+}
+#endif
+
 char *
 readpassphrase(const char *prompt, char *outBuf, size_t outBufLen, int flags)
 {
@@ -1244,6 +1277,11 @@ readpassphrase(const char *prompt, char *outBuf, size_t outBufLen, int flags)
 			}
 		} else if (ch == L'\003') { /* exit on Ctrl+C */
 			fatal("");
+#ifdef WIN32
+		}
+		else if ((ch == 0x16/* Ctrl-V */) || ((ch == 0xE0) && ((ch = _getwch()) == 0x52)/* Shift-Insert*/)) {
+			current_index += get_clip_data(&outBuf[current_index], outBufLen - current_index);
+#endif
 		} else {
 			if (flags & RPP_SEVENBIT)
 				ch &= 0x7f;
