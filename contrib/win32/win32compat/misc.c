@@ -1231,6 +1231,10 @@ static int get_clip_data(char* buf, int len) {
 }
 #endif
 
+#define CTRL_V_CODE 0x16
+#define SHIFT_INSERT_CODE1 0xE0
+#define SHIFT_INSERT_CODE2 0x52
+
 char *
 readpassphrase(const char *prompt, char *outBuf, size_t outBufLen, int flags)
 {
@@ -1279,7 +1283,7 @@ readpassphrase(const char *prompt, char *outBuf, size_t outBufLen, int flags)
 			fatal("");
 #ifdef WIN32
 		}
-		else if ((ch == 0x16/* Ctrl-V */) || ((ch == 0xE0) && ((ch = _getwch()) == 0x52)/* Shift-Insert*/)) {
+		else if ((CTRL_V_CODE == ch) || ((SHIFT_INSERT_CODE1 == ch) && (SHIFT_INSERT_CODE2 == (ch = _getwch())))) {
 			current_index += get_clip_data(&outBuf[current_index], outBufLen - current_index);
 #endif
 		} else {
